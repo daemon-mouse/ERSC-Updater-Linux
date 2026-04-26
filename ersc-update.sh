@@ -97,6 +97,19 @@ download_latest_release() {
     log_info "Download complete."
 }
 
+manual_select_zip_file() {
+    local SELECTION="$(
+        zenity --title="Select the Seamless Co-op mod Zip File" \
+            --file-selection --file-filter='Seamless*.zip'
+    )"
+    if [ "$SELECTION" = "" ]; then
+        echo "No selection was made."
+        exit 0
+    fi
+
+    cp -v "$SELECTION" "$TEMP_ZIP_PATH"
+}
+
 # Backs up the user's existing settings file if it's different from the last backup.
 manage_settings_backup() {
     log_info "Checking for existing mod settings..."
@@ -222,7 +235,26 @@ main() {
     cd "$game_dir" || die "Could not change to game directory: $game_dir"
     log_info "Operating in game directory: $(pwd)"
 
-    download_latest_release
+    local GET_ZIP_MODE="$(
+        zenity --list --radiolist --title "Select Mod Zip file" \
+            --text "Please select an option." \
+            --column Selection --column Mode --column Description \
+            TRUE GitHub "Auto-download from GitHub" \
+            FALSE Manual "Manual download (select zip file)"
+    )"
+
+    case "$GET_ZIP_MODE" in
+    GitHub)
+        download_latest_release
+        ;;
+    Manual)
+        manual_select_zip_file
+        ;;
+    *)
+        echo "Zip mode not selected."
+        exit 0
+        ;;
+    esac
 
     # This must be done BEFORE unzipping, as unzip will overwrite the current settings.
     manage_settings_backup
